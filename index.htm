@@ -1,0 +1,44 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<h1>Analogue Values</h1>
+<div id="analoge_data">Arduino analog input values loading.....</div>
+<h1>Arduino LED Status</h1>
+<div>
+    <span id="led_status">
+        Off
+    </span> | <button onclick="changeLEDStatus()">Change Status</button>
+</div>
+<h1>Throttle Value</h1>
+<span id="Throttle">NOT RECEIVED</span>
+<script>
+    window.addEventListener("gamepadconnected", (event) => {
+        console.log("A gamepad connected:");
+        console.log(event.gamepad);
+        controller = event.gamepad;
+    });
+    window.addEventListener("gamepaddisconnected", (event) => {
+        console.log("A gamepad disconnected:");
+        console.log(event.gamepad);
+    });
+    var gamepads = navigator.getGamepads();
+    var intervalID = window.setInterval(getInput, 10);
+
+    function getInput() {
+        tVal = controller.axes[2];
+        nocache = "&nocache=" + Math.random() * 10;
+        var request = new XMLHttpRequest();
+        request.onreadystatechange = function () {
+            if (this.readyState == 4) {
+                if (this.status == 200) {
+                    if (this.responseText != null) {
+                        document.getElementById("Throttle").innerHTML = this.responseText;
+                    }
+                }
+            }
+        }
+        console.log(request.open("GET", "?tval" + tVal + nocache, true));
+        request.send(null);
+    }
+
+</script>
+</html>
