@@ -1,44 +1,57 @@
-<!DOCTYPE HTML>
-<html lang="en">
-<h1>Analogue Values</h1>
-<div id="analoge_data">Arduino analog input values loading.....</div>
-<h1>Arduino LED Status</h1>
-<div>
-    <span id="led_status">
-        Off
-    </span> | <button onclick="changeLEDStatus()">Change Status</button>
-</div>
-<h1>Throttle Value</h1>
-<span id="Throttle">NOT RECEIVED</span>
-<script>
-    window.addEventListener("gamepadconnected", (event) => {
-        console.log("A gamepad connected:");
-        console.log(event.gamepad);
-        controller = event.gamepad;
-    });
-    window.addEventListener("gamepaddisconnected", (event) => {
-        console.log("A gamepad disconnected:");
-        console.log(event.gamepad);
-    });
-    var gamepads = navigator.getGamepads();
-    var intervalID = window.setInterval(getInput, 10);
-
-    function getInput() {
-        tVal = controller.axes[2];
-        nocache = "&nocache=" + Math.random() * 10;
-        var request = new XMLHttpRequest();
-        request.onreadystatechange = function () {
-            if (this.readyState == 4) {
-                if (this.status == 200) {
-                    if (this.responseText != null) {
-                        document.getElementById("Throttle").innerHTML = this.responseText;
+﻿<HTML>
+    <HEAD>
+        <meta name='apple-mobile-web-app-capable' content='yes' />
+        <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+        <link rel='stylesheet' type='text/css' href='https://randomnerdtutorials.com/ethernetcss.css' />    
+        <TITLE>Arduino AJAX Webserver</TITLE>    
+    </HEAD>    
+    <BODY>
+        <H1>Tripp's Project</H1>
+        <h1 id="Test">No Controller Input</h1>
+        <br />  
+    </BODY>  
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        let strLED= "LED1=0";
+        let prevIt = "";
+        //Detect When Gamepad is plugged in
+        window.addEventListener("gamepadconnected", (e) => {
+            let gp = navigator.getGamepads()[e.gamepad.index]
+            console.log(`ID: ${e.gamepad.id}, buttons: ${gp.buttons.length}`)
+            //Our version of "Animation Frame event"
+            setInterval(() => {
+                let request = new XMLHttpRequest(); 
+                request.open("GET", "ajax_inputs" + strLED + `&nocache=${Math.random() * 1000000}`, true)
+                let gamepads = navigator.getGamepads();
+                if(gamepads[0].buttons[0].pressed) {
+                    document.getElementById("Test").innerHTML = `Button is Pressed!`;
+                    prevIt = strLED;
+                    strLED = "LED1=1";
+                    } else {
+                    document.getElementById("Test").innerHTML = `Button is Up`;
+                    prevIt = strLED;
+                    strLED = "LED1=0";
                     }
-                }
-            }
-        }
-        console.log(request.open("GET", "?tval" + tVal + nocache, true));
-        request.send(null);
-    }
-
-</script>
-</html>
+                    //Just so we dont kill Chrome
+                    if(prevIt != strLED) {
+                        sendtoArduino(strLED);
+                    }
+            }, 10);
+        });
+        const sendtoArduino = (AJAXString) => {
+		jQuery.support.cors = true;
+		$.ajax({
+			crossDomain: true,
+			async : true,
+			type: "POST",
+			headers: {
+				'Access-Control-Allow-Origin': '*'
+			},
+			url: "http://192.168.0.2:80/?r=" + AJAXString,
+			data: '{}',
+			contentType: "text/html",
+			dataType: "html",
+		});		 
+	}
+    </script>
+</HTML>
