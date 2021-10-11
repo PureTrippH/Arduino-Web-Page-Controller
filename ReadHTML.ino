@@ -36,10 +36,8 @@ void setup() {
   pinMode(4, OUTPUT);
   pinMode(13, OUTPUT);
   digitalWrite(4, HIGH);
-  // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
   }
 
 
@@ -55,7 +53,7 @@ void setup() {
   if (Ethernet.hardwareStatus() == EthernetNoHardware) {
     Serial.println("Ethernet shield was not found.  Sorry, can't run without hardware. :(");
     while (true) {
-      delay(1); // do nothing, no point running without Ethernet hardware
+      delay(1); 
     }
   }
   if(Ethernet.linkStatus() == LinkOFF) {
@@ -65,23 +63,6 @@ void setup() {
     Serial.print("server is at ");
     Serial.println(Ethernet.localIP());
   }
-
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  myFile = SD.open("test.txt", FILE_WRITE);
-
-  // if the file opened okay, write to it:
-  if (myFile) {
-    Serial.print("Writing to test.txt...");
-    myFile.println("testing 1, 2, 3.");
-    // close the file:
-    myFile.close();
-    Serial.println("done.");
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
-
 }
 
 void loop() {
@@ -108,14 +89,20 @@ EthernetClient client = server.available();
           if (htmlFile) {
             //Serial.println("test.txt:");
             // read from the file until there's nothing else in it:
+            byte clientBuffer[1400];
+            int byteCount = 0;
             while (htmlFile.available()) {
-              client.write(htmlFile.read());
+              clientBuffer[byteCount] = htmlFile.read();
+              byteCount++;
+              if(byteCount > (sizeof(clientBuffer)-1)) {
+                client.write(clientBuffer, 1400);
+                byteCount = 0;
+              }
             }
+            if(byteCount > 0) client.write(clientBuffer, byteCount);
             // close the file:
             htmlFile.close();
 
-          } else {
-            Serial.println("Wont Work");
           }
             //stopping client
             client.stop();
