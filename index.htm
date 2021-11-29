@@ -1,4 +1,4 @@
-﻿<HTML>
+<HTML>
     <HEAD>
         <meta name='apple-mobile-web-app-capable' content='yes' />
         <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
@@ -10,32 +10,36 @@
         <h1 id="Test">No Controller Input</h1>
         <br />  
     </BODY>  
+    <video id="videoFeed" controls muted autoplay></video>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
-        let strLED= "LED1=0";
-        let prevIt = "";
+        let bitStream = "";
+        let bitStreamPrev = "";
+        const videoFeed = document.querySelector('#videoFeed');
+        window.navigator.mediaDevices.getUserMedia({ video: true}).then(stream => {
+            videoFeed.srcObject = stream;
+            videoFeed.onloadedmetadata = (e) => {
+                video.play();
+            }
+        }).catch((err) => {
+            console.log(`ERROR: ${err} - You do not have permission`);
+        });
         //Detect When Gamepad is plugged in
         window.addEventListener("gamepadconnected", (e) => {
             let gp = navigator.getGamepads()[e.gamepad.index]
             console.log(`ID: ${e.gamepad.id}, buttons: ${gp.buttons.length}`)
             //Our version of "Animation Frame event"
             setInterval(() => {
-                let request = new XMLHttpRequest(); 
-                request.open("GET", "ajax_inputs" + strLED + `&nocache=${Math.random() * 1000000}`, true)
                 let gamepads = navigator.getGamepads();
-                if(gamepads[0].buttons[0].pressed) {
-                    document.getElementById("Test").innerHTML = `Button is Pressed!`;
-                    prevIt = strLED;
-                    strLED = "LED1=1";
-                    } else {
-                    document.getElementById("Test").innerHTML = `Button is Up`;
-                    prevIt = strLED;
-                    strLED = "LED1=0";
-                    }
-                    //Just so we dont kill Chrome
-                    if(prevIt != strLED) {
-                        sendtoArduino(strLED);
-                    }
+                document.getElementById("Test").innerHTML = gamepads[0].buttons[0].pressed ? "Button is Pressed!" : "Button is Up";
+                bitStream = `buttonOne=${gamepads[0].buttons[0].pressed}?buttonTwo=${gamepads[0].buttons[1].pressed}`;
+                //compares two request strings
+                if(bitStream != bitStreamPrev) {
+                    console.log(`equality 1: ${bitStream} ${bitStreamPrev}`);
+                    console.log(`equality 2: ${bitStreamPrev}`);
+                    sendtoArduino(bitStream);
+                }
+                bitStreamPrev = bitStream;
             }, 1);
         });
         const sendtoArduino = (AJAXString) => {

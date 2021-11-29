@@ -1,23 +1,3 @@
-/*
-  SD card read/write
-
-  This example shows how to read and write data to and from an SD card file
-  The circuit:
-   SD card attached to SPI bus as follows:
- ** MOSI - pin 11
- ** MISO - pin 12
- ** CLK - pin 13
- ** CS - pin 4 (for MKRZero SD: SDCARD_SS_PIN)
-
-  created   Nov 2010
-  by David A. Mellis
-  modified 9 Apr 2012
-  by Tom Igoe
-
-  This example code is in the public domain.
-
-*/
-
 #include <SPI.h>
 #include <SD.h>
 
@@ -27,6 +7,7 @@ IPAddress ip(192, 168, 0, 2);
 IPAddress subnet (255, 255, 255, 0);
 IPAddress gateway(192, 168, 0, 1);
 EthernetServer server(80);  
+String valueKeyPairs[11][2]; //Array for Storing Key Value Pairs of Controller and inputs from AJAX
 
 String readString; 
 File myFile;
@@ -34,9 +15,12 @@ File root;
 
 void setup() {
   pinMode(4, OUTPUT);
+  pinMode(8, OUTPUT);
   pinMode(13, OUTPUT);
   digitalWrite(4, HIGH);
   Serial.begin(9600);
+  //Test parse
+  parseAJAXTwoD("post /?r=buttonOne=false?buttonTwo=false HTTP/1.1");
   while (!Serial) {
   }
 
@@ -76,7 +60,15 @@ EthernetClient client = server.available();
         //if HTTP request has ended
         
         if (c == '\n') {
-           readAJAX(readString);
+          Serial.println(readString);
+          parseAJAXTwoD(readString);
+          Serial.println(valueKeyPairs[0][0] + ": " + valueKeyPairs[0][1]);
+          if(valueKeyPairs[0][1] == "true") {
+            digitalWrite(13, HIGH);
+          } else digitalWrite(13, LOW);
+          if(valueKeyPairs[1][1] == "true") {
+            digitalWrite(8, HIGH);
+          } else digitalWrite(8, LOW);
           ///////////////
           //print to serial monitor for debuging 
           client.println("HTTP/1.1 200 OK"); //send new page
@@ -116,11 +108,41 @@ EthernetClient client = server.available();
 
 void readAJAX(String request) {
   request.toLowerCase();
-  Serial.println(request);
   if(request.indexOf("led1=1") > 0) {
     digitalWrite(13, HIGH);
   }
   if(request.indexOf("led1=0") > 0) {
     digitalWrite(13, LOW);
+  }
+}
+
+
+void parseAJAXTwoD(String request) {
+  int oneDIndex = 0;
+  int twoDStringIndex = 0;
+  String valueKey = "";
+  String var = "";
+  
+  if(request.substring(0, 4) == "POST") {
+  for(auto &ch : request.substring(9)) { //Loops through requestString
+    if(ch == '?' || ch == ' ') { //Detects key value and goes into nested loop       
+        for(auto &chvar : valueKey) { //Loop through each character of key value
+          if(chvar == '='  || chvar == ' ') { //Check for equal to split two strings into key and value
+            Serial.println("ENTERED VALUE IF");
+            valueKeyPairs[oneDIndex][0] = var; //Writes Key
+            valueKeyPairs[oneDIndex][1] = valueKey.substring(twoDStringIndex + 1); //Writes Value
+          } else {
+            twoDStringIndex++;
+            var += chvar;
+          }
+        }
+        valueKey = "";
+        var = "";
+        twoDStringIndex=0;
+        oneDIndex++; //increases the key-value array index
+    } else {
+      valueKey += ch; //records previous variables
+    }
+  }
   }
 }
