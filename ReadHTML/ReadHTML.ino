@@ -17,6 +17,7 @@ void setup() {
   pinMode(4, OUTPUT);
   pinMode(8, OUTPUT);
   pinMode(13, OUTPUT);
+  pinMode(11, OUTPUT);
   digitalWrite(4, HIGH);
   Serial.begin(9600);
   //Test parse
@@ -58,7 +59,6 @@ EthernetClient client = server.available();
           readString += c; 
           
         //if HTTP request has ended
-        
         if (c == '\n') {
           Serial.println(readString);
           parseAJAXTwoD(readString);
@@ -69,6 +69,9 @@ EthernetClient client = server.available();
           if(valueKeyPairs[1][1] == "true") {
             digitalWrite(8, HIGH);
           } else digitalWrite(8, LOW);
+          if(valueKeyPairs[2][1] == "true") {
+            digitalWrite(11, HIGH);
+          } else digitalWrite(11, LOW);
           ///////////////
           //print to serial monitor for debuging 
           client.println("HTTP/1.1 200 OK"); //send new page

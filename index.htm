@@ -8,15 +8,26 @@
     <BODY>
         <H1>Tripp's Project</H1>
         <h1 id="Test">No Controller Input</h1>
-        <br />  
+        <br />
+        <h1 id="ImageType">Image Recognition Type: </h1>  
+        <h1 id="Probability">Probability</h1>
     </BODY>  
-    <video id="videoFeed" controls muted autoplay></video>
+    <video id="videoFeed" controls muted autoplay width="1000", height="500"></video>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script>
-        let bitStream = "";
-        let bitStreamPrev = "";
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script type="module" async="true">
+        const coco = await cocoSsd.load();
         const videoFeed = document.querySelector('#videoFeed');
-        window.navigator.mediaDevices.getUserMedia({ video: true}).then(stream => {
+        const camera = await tf.data.webcam(videoFeed);
+        console.log(camera);
+        let bitStream = ""; //Intializes the two data strings
+        let bitStreamPrev = ""; //Initalizes the two data strings
+        // Initalize webcam
+        window.navigator.mediaDevices.getUserMedia({ video: {
+            width: { min: 1024, ideal: 1280, max: 1920 },
+            height: { min: 576, ideal: 720, max: 1080 }
+        }}).then(stream => {
             videoFeed.srcObject = stream;
             videoFeed.onloadedmetadata = (e) => {
                 video.play();
@@ -25,14 +36,16 @@
             console.log(`ERROR: ${err} - You do not have permission`);
         });
         //Detect When Gamepad is plugged in
-        window.addEventListener("gamepadconnected", (e) => {
-            let gp = navigator.getGamepads()[e.gamepad.index]
+        window.addEventListener("gamepadconnected", async (e) => {
+            let gp = navigator.getGamepads()[e.gamepad.index];
             console.log(`ID: ${e.gamepad.id}, buttons: ${gp.buttons.length}`)
-            //Our version of "Animation Frame event"
-            setInterval(() => {
+            //Our recursive, delayed loop
+            setInterval(async () => {
+                let imageRec = await recognizeImage(camera, coco);
                 let gamepads = navigator.getGamepads();
                 document.getElementById("Test").innerHTML = gamepads[0].buttons[0].pressed ? "Button is Pressed!" : "Button is Up";
-                bitStream = `buttonOne=${gamepads[0].buttons[0].pressed}?buttonTwo=${gamepads[0].buttons[1].pressed}`;
+                console.log(`Is Person? ${imageRec == 'person'}`);
+                bitStream = `buttonOne=${gamepads[0].buttons[0].pressed}?buttonTwo=${gamepads[0].buttons[1].pressed}?isPerson=${imageRec == 'person'}`;
                 //compares two request strings
                 if(bitStream != bitStreamPrev) {
                     console.log(`equality 1: ${bitStream} ${bitStreamPrev}`);
@@ -42,20 +55,36 @@
                 bitStreamPrev = bitStream;
             }, 1);
         });
+
+        const recognizeImage = async(camera, net) => {
+            let frame = await camera.capture();
+            let imgRecData = await net.detect(frame);
+            frame.dispose();
+            let exportData = [];
+            imgRecData.forEach(pred => {
+                if(pred.score > 0.66) {
+                    exportData.push(pred);
+                }
+            });
+            document.getElementById("ImageType").innerHTML =  `${exportData[0] ? exportData[0].class : "Not Confident"}`;
+            document.getElementById("Probability").innerHTML =  `Probability: ${exportData[0] ? exportData[0].score : ""}`;
+            await tf.nextFrame();
+            if(exportData[0]) return exportData[0].class;
+        }
         const sendtoArduino = (AJAXString) => {
-		jQuery.support.cors = true;
-		$.ajax({
-			crossDomain: true,
-			async : true,
-			type: "POST",
-			headers: {
-				'Access-Control-Allow-Origin': '*'
-			},
-			url: "http://192.168.0.2:80/?r=" + AJAXString,
-			data: '{}',
-			contentType: "text/html",
-			dataType: "html",
-		});		 
-	}
+        jQuery.support.cors = true;
+        $.ajax({
+            crossDomain: true,
+            async : true,
+            type: "POST",
+            headers: {
+                'Access-Control-Allow-Origin': '*'
+            },
+            url: "http://192.168.0.2:80/?r=" + AJAXString,
+            data: '{}',
+            contentType: "text/html",
+            dataType: "html",
+        });		 
+        }
     </script>
 </HTML>
