@@ -1,3 +1,8 @@
+/*Hello! Welcome to the Arduino Page for my Website Arduino Controller!
+ * This project is meant to be easily applied to a variety of projects to fully exploit Arduino's processing capabilities.
+ * So far I have gotten this to run on a basic 3 LED system with hopes of hooking up drone flight in January and an ROV in March.
+ */
+
 #include <SPI.h>
 #include <SD.h>
 
@@ -25,7 +30,7 @@ void setup() {
   while (!Serial) {
   }
 
-
+  //Series of Hardware Checks
   Serial.print("Initializing SD card...");
 
   if (!SD.begin(4)) {
@@ -60,9 +65,7 @@ EthernetClient client = server.available();
           
         //if HTTP request has ended
         if (c == '\n') {
-          Serial.println(readString);
           parseAJAXTwoD(readString);
-          Serial.println(valueKeyPairs[0][0] + ": " + valueKeyPairs[0][1]);
           if(valueKeyPairs[0][1] == "true") {
             digitalWrite(13, HIGH);
           } else digitalWrite(13, LOW);
@@ -82,8 +85,7 @@ EthernetClient client = server.available();
           File htmlFile = SD.open("index.htm");
           
           if (htmlFile) {
-            //Serial.println("test.txt:");
-            // read from the file until there's nothing else in it:
+            //Parse and Read HTML File
             byte clientBuffer[1400];
             int byteCount = 0;
             while (htmlFile.available()) {
@@ -101,24 +103,14 @@ EthernetClient client = server.available();
           }
             //stopping client
             client.stop();
+            //Reset the bytes sent
             readString="";
-          //}
+          }
         }
       }
     }
   } 
 }
-
-void readAJAX(String request) {
-  request.toLowerCase();
-  if(request.indexOf("led1=1") > 0) {
-    digitalWrite(13, HIGH);
-  }
-  if(request.indexOf("led1=0") > 0) {
-    digitalWrite(13, LOW);
-  }
-}
-
 
 void parseAJAXTwoD(String request) {
   int oneDIndex = 0;
@@ -127,25 +119,24 @@ void parseAJAXTwoD(String request) {
   String var = "";
   
   if(request.substring(0, 4) == "POST") {
-  for(auto &ch : request.substring(9)) { //Loops through requestString
-    if(ch == '?' || ch == ' ') { //Detects key value and goes into nested loop       
-        for(auto &chvar : valueKey) { //Loop through each character of key value
-          if(chvar == '='  || chvar == ' ') { //Check for equal to split two strings into key and value
-            Serial.println("ENTERED VALUE IF");
-            valueKeyPairs[oneDIndex][0] = var; //Writes Key
-            valueKeyPairs[oneDIndex][1] = valueKey.substring(twoDStringIndex + 1); //Writes Value
-          } else {
-            twoDStringIndex++;
-            var += chvar;
+    for(auto &ch : request.substring(9)) { //Loops through requestString
+      if(ch == '?' || ch == ' ') { //Detects key value and goes into nested loop       
+          for(auto &chvar : valueKey) { //Loop through each character of key value
+            if(chvar == '='  || chvar == ' ') { //Check for equal to split two strings into key and value
+              valueKeyPairs[oneDIndex][0] = var; //Writes Key
+              valueKeyPairs[oneDIndex][1] = valueKey.substring(twoDStringIndex + 1); //Writes Value
+            } else {
+              twoDStringIndex++;
+              var += chvar;
+            }
           }
-        }
-        valueKey = "";
-        var = "";
-        twoDStringIndex=0;
-        oneDIndex++; //increases the key-value array index
-    } else {
-      valueKey += ch; //records previous variables
-    }
-  }
-  }
+          valueKey = "";
+          var = "";
+          twoDStringIndex=0;
+          oneDIndex++; //increases the key-value array index
+      } else {
+        valueKey += ch; //records previous variables
+      }
+     }
+   }
 }
