@@ -17,10 +17,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script type="module" async="true">
+        let attainedJSON = {};
         const coco = await cocoSsd.load();
         const videoFeed = document.querySelector('#videoFeed');
         const camera = await tf.data.webcam(videoFeed);
-        console.log(camera);
+        
         let bitStream = ""; //Intializes the two data strings
         let bitStreamPrev = ""; //Initalizes the two data strings
         // Initalize webcam
@@ -37,10 +38,13 @@
         });
         //Detect When Gamepad is plugged in
         window.addEventListener("gamepadconnected", async (e) => {
+
             let gp = navigator.getGamepads()[e.gamepad.index];
             console.log(`ID: ${e.gamepad.id}, buttons: ${gp.buttons.length}`)
             //Our recursive, delayed loop
             setInterval(async () => {
+                let attainedJSON = await getArduinoData();
+                console.log(attainedJSON);
                 let imageRec = await recognizeImage(camera, coco);
                 let gamepads = navigator.getGamepads();
                 document.getElementById("Test").innerHTML = gamepads[0].buttons[0].pressed ? "Button is Pressed!" : "Button is Up";
@@ -85,6 +89,17 @@
             contentType: "text/html",
             dataType: "html",
         });		 
+        }
+        const getArduinoData = async () => {
+            $.get("http://192.168.0.2:10/", (data) => {
+                if(data) {
+                    console.log(data);
+                    return data;
+                } else {
+                    return attainedJSON;
+                }
+
+            })
         }
     </script>
 </HTML>

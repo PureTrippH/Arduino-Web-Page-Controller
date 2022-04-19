@@ -12,7 +12,10 @@ IPAddress ip(192, 168, 0, 2);
 IPAddress subnet (255, 255, 255, 0);
 IPAddress gateway(192, 168, 0, 1);
 EthernetServer server(80);  
+EthernetServer dataServer(10);
 String valueKeyPairs[11][2]; //Array for Storing Key Value Pairs of Controller and inputs from AJAX
+
+
 
 String readString; 
 File myFile;
@@ -24,7 +27,7 @@ void setup() {
   pinMode(13, OUTPUT);
   pinMode(11, OUTPUT);
   digitalWrite(4, HIGH);
-  Serial.begin(9600);
+  Serial.begin(19200);
   //Test parse
   parseAJAXTwoD("post /?r=buttonOne=false?buttonTwo=false HTTP/1.1");
   while (!Serial) {
@@ -50,22 +53,31 @@ void setup() {
     Serial.println("Cable not connected");
   } else {
     server.begin();
+    dataServer.begin();
     Serial.print("server is at ");
     Serial.println(Ethernet.localIP());
   }
 }
 
-void loop() {
+void loop() {  
 EthernetClient client = server.available();
+EthernetClient dataClient = dataServer.available();
   if (client) {
     while (client.connected()) {
       if (client.available()) {
+        //Write out HTTP Requests
         char c = client.read();
           readString += c; 
-          
+          Serial.println(readString);
         //if HTTP request has ended
         if (c == '\n') {
-          parseAJAXTwoD(readString);
+                      dataClient.println("HTTP/1.1 200 OK"); //send new page
+            dataClient.println("Content-Type: text/html");
+            dataClient.println("Access-Control-Allow-Origin: *");
+            dataClient.println();
+            dataClient.println(analogRead(A0));
+         
+         
           if(valueKeyPairs[0][1] == "true") {
             digitalWrite(13, HIGH);
           } else digitalWrite(13, LOW);
@@ -95,21 +107,44 @@ EthernetClient client = server.available();
                 client.write(clientBuffer, 1400);
                 byteCount = 0;
               }
+              
             }
             if(byteCount > 0) client.write(clientBuffer, byteCount);
             // close the file:
+            client.print("</HTML>");
+
             htmlFile.close();
 
           }
             //stopping client
+            
             client.stop();
+            dataClient.stop();
             //Reset the bytes sent
             readString="";
           }
         }
+         parseAJAXTwoD(readString);
       }
     }
   } 
+
+void sendData(EthernetClient client, String request, String postData) {
+  if(request.substring(0, 3) == "GET") {
+    Serial.println("Request is GET");
+    client.println("POST HTTP/1.1");
+    client.println("Host: " + String("192.168.0.2"));
+    client.println("User-Agent: Arduino/1.0");
+    client.println("Content-Type: application/x-www-form-urlencoded");
+    client.print("Content-Length: ");    
+    client.println(postData.length());
+    client.println("Connection: close");
+
+    client.println("");
+    client.println(); // end HTTP header
+    // send HTTP body
+    client.println(postData);
+  }
 }
 
 void parseAJAXTwoD(String request) {
